@@ -147,7 +147,6 @@ func (f *RandomImageFactory) generateRandomFilePool() error {
 		return fmt.Errorf("failed creating directory %q: %w", imageDir, err)
 	}
 
-	// 50 KB files
 	for i := uint(0); i < f.LayerCount; i++ {
 		filePath := path.Join(imageDir, fmt.Sprintf("random_%dKB_%d.txt", f.LayerSizeKB, i))
 		f.allGeneratedFiles = append(f.allGeneratedFiles, filePath)
