@@ -33,8 +33,8 @@ var (
 // RandomImageFactory generates random images with the specified layer size and
 // count parameters.
 type RandomImageFactory struct {
-	LayerSizeKB int
-	LayerCount  int
+	LayerSizeKB uint
+	LayerCount  uint
 	Seed        int64
 	Tags        []string
 
@@ -148,7 +148,7 @@ func (f *RandomImageFactory) generateRandomFilePool() error {
 	}
 
 	// 50 KB files
-	for i := 0; i < f.LayerCount; i++ {
+	for i := uint(0); i < f.LayerCount; i++ {
 		filePath := path.Join(imageDir, fmt.Sprintf("random_%dKB_%d.txt", f.LayerSizeKB, i))
 		f.allGeneratedFiles = append(f.allGeneratedFiles, filePath)
 
@@ -159,7 +159,7 @@ func (f *RandomImageFactory) generateRandomFilePool() error {
 			return fmt.Errorf("error checking if file exists: %w", err)
 		}
 
-		err = ioutil.WriteFile(filePath, f.randBytes(1024*f.LayerSizeKB), 0644)
+		err = ioutil.WriteFile(filePath, f.randBytes(1024*int(f.LayerSizeKB)), 0644)
 		if err != nil {
 			return fmt.Errorf("error writing random bytes to file: %w", err)
 		}
