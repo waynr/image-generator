@@ -16,9 +16,8 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+	"github.com/waynr/image-generator/pkg/image"
 )
 
 // buildCmd represents the build command
@@ -31,8 +30,15 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("build called")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		randomImageFactory := image.RandomImageFactory{
+			LayerSizeKB: 5000,
+			LayerCount:  125,
+			Seed:        4848484,
+			Tags:        []string{"registry.digitalocean.com/meow/rando"},
+		}
+
+		return randomImageFactory.GenerateImage()
 	},
 }
 
