@@ -1,0 +1,4 @@
+context.tar
+dockerfile.generated
+generated-files
+image-generator
