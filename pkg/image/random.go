@@ -218,5 +218,7 @@ func (f *RandomImageFactory) randBytes(n int) []byte {
 		remain--
 	}
 
+	f.Seed = src.Int63()
+
 	return b
 }
