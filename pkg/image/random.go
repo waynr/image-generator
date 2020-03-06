@@ -23,11 +23,7 @@ const (
 	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
 	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 
-	fileSizeKB = 50
-)
-
-var (
-	imageDir = "./generated-files"
+	baseImageDir = "./generated-files"
 )
 
 // RandomImageFactory generates random images with the specified layer size and
@@ -37,6 +33,7 @@ type RandomImageFactory struct {
 	layerCount  uint
 	tags        []string
 
+	imageDir          string
 	src               *rand.Rand
 	dockerClient      *client.Client
 	allGeneratedFiles []string
@@ -45,6 +42,7 @@ type RandomImageFactory struct {
 func NewRandomImageFactory(layerSizeKB, layerCount uint, seed int64, tags []string) RandomImageFactory {
 
 	return RandomImageFactory{
+		imageDir:    path.Join(baseImageDir, fmt.Sprintf("%d", seed)),
 		layerSizeKB: layerSizeKB,
 		layerCount:  layerCount,
 		tags:        tags,
@@ -152,13 +150,13 @@ func (f *RandomImageFactory) shuffleGeneratedFilePaths() {
 }
 
 func (f *RandomImageFactory) generateRandomFilePool() error {
-	err := os.MkdirAll(imageDir, 0700)
+	err := os.MkdirAll(f.imageDir, 0700)
 	if err != nil {
-		return fmt.Errorf("failed creating directory %q: %w", imageDir, err)
+		return fmt.Errorf("failed creating directory %q: %w", f.imageDir, err)
 	}
 
 	for i := uint(0); i < f.layerCount; i++ {
-		filePath := path.Join(imageDir, fmt.Sprintf("random_%dKB_%d.txt", f.layerSizeKB, i))
+		filePath := path.Join(f.imageDir, fmt.Sprintf("random_%dKB_%d.txt", f.layerSizeKB, i))
 		f.allGeneratedFiles = append(f.allGeneratedFiles, filePath)
 
 		_, err = os.Stat(filePath)
