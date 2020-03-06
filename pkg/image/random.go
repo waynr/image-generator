@@ -33,13 +33,23 @@ var (
 // RandomImageFactory generates random images with the specified layer size and
 // count parameters.
 type RandomImageFactory struct {
-	LayerSizeKB uint
-	LayerCount  uint
-	Seed        int64
-	Tags        []string
+	layerSizeKB uint
+	layerCount  uint
+	tags        []string
 
+	src               *rand.Rand
 	dockerClient      *client.Client
 	allGeneratedFiles []string
+}
+
+func NewRandomImageFactory(layerSizeKB, layerCount uint, seed int64, tags []string) RandomImageFactory {
+
+	return RandomImageFactory{
+		layerSizeKB: layerSizeKB,
+		layerCount:  layerCount,
+		tags:        tags,
+		src:         rand.New(rand.NewSource(seed)),
+	}
 }
 
 // GenerateImage generates unique files filled with random bytes then uses
@@ -78,7 +88,7 @@ func (f *RandomImageFactory) GenerateImage() error {
 
 	options := types.ImageBuildOptions{
 		Dockerfile: dockerfilePath,
-		Tags:       f.Tags,
+		Tags:       f.tags,
 	}
 	resp, err := cli.ImageBuild(context.Background(), buildContext, options)
 	if err != nil {
@@ -136,7 +146,7 @@ func (f *RandomImageFactory) createArchive(name string, filePaths []string) erro
 
 func (f *RandomImageFactory) shuffleGeneratedFilePaths() {
 	for i := range f.allGeneratedFiles {
-		j := rand.Intn(i + 1)
+		j := f.src.Intn(i + 1)
 		f.allGeneratedFiles[i], f.allGeneratedFiles[j] = f.allGeneratedFiles[j], f.allGeneratedFiles[i]
 	}
 }
@@ -147,8 +157,8 @@ func (f *RandomImageFactory) generateRandomFilePool() error {
 		return fmt.Errorf("failed creating directory %q: %w", imageDir, err)
 	}
 
-	for i := uint(0); i < f.LayerCount; i++ {
-		filePath := path.Join(imageDir, fmt.Sprintf("random_%dKB_%d.txt", f.LayerSizeKB, i))
+	for i := uint(0); i < f.layerCount; i++ {
+		filePath := path.Join(imageDir, fmt.Sprintf("random_%dKB_%d.txt", f.layerSizeKB, i))
 		f.allGeneratedFiles = append(f.allGeneratedFiles, filePath)
 
 		_, err = os.Stat(filePath)
@@ -158,7 +168,7 @@ func (f *RandomImageFactory) generateRandomFilePool() error {
 			return fmt.Errorf("error checking if file exists: %w", err)
 		}
 
-		err = ioutil.WriteFile(filePath, f.randBytes(1024*int(f.LayerSizeKB)), 0644)
+		err = ioutil.WriteFile(filePath, f.randBytes(1024*int(f.layerSizeKB)), 0644)
 		if err != nil {
 			return fmt.Errorf("error writing random bytes to file: %w", err)
 		}
@@ -204,11 +214,10 @@ func (f *RandomImageFactory) getDockerClient() (*client.Client, error) {
 // produce a byte array instead of a string
 func (f *RandomImageFactory) randBytes(n int) []byte {
 	b := make([]byte, n)
-	src := rand.NewSource(f.Seed)
 
-	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+	for i, cache, remain := n-1, f.src.Int63(), letterIdxMax; i >= 0; {
 		if remain == 0 {
-			cache, remain = src.Int63(), letterIdxMax
+			cache, remain = f.src.Int63(), letterIdxMax
 		}
 		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
 			b[i] = letterBytes[idx]
@@ -217,8 +226,6 @@ func (f *RandomImageFactory) randBytes(n int) []byte {
 		cache >>= letterIdxBits
 		remain--
 	}
-
-	f.Seed = src.Int63()
 
 	return b
 }
