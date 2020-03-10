@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"path"
@@ -37,6 +38,7 @@ type RandomImageFactory struct {
 	src               *rand.Rand
 	dockerClient      *client.Client
 	allGeneratedFiles []string
+	logger            *log.Logger
 }
 
 func NewRandomImageFactory(layerSizeKB, layerCount uint, seed int64, tags []string) RandomImageFactory {
@@ -50,11 +52,16 @@ func NewRandomImageFactory(layerSizeKB, layerCount uint, seed int64, tags []stri
 	}
 }
 
+func (f *RandomImageFactory) WithLogger(l *log.Logger) { f.logger = l }
+
 // GenerateImage generates unique files filled with random bytes then uses
 // those files to build a docker image with layers filled using the
 // randomly-generated files according to the random layer count and layer size
 // parameters specified in RandomImageFactory
 func (f *RandomImageFactory) GenerateImage() error {
+	if f.logger == nil {
+		f.logger = log.New(ioutil.Discard, "", log.LstdFlags)
+	}
 	err := f.generateRandomFilePool()
 	if err != nil {
 		return err
@@ -95,7 +102,7 @@ func (f *RandomImageFactory) GenerateImage() error {
 
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
-	fmt.Println(buf.String())
+	f.logger.Print(buf.String())
 
 	return nil
 }
