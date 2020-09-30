@@ -30,10 +30,6 @@ const (
 // RandomImageFactory generates random images with the specified layer size and
 // count parameters.
 type RandomImageFactory struct {
-	layerSizeKB uint
-	layerCount  uint
-	tags        []string
-
 	imageDir          string
 	src               *rand.Rand
 	dockerClient      *client.Client
@@ -41,14 +37,11 @@ type RandomImageFactory struct {
 	logger            *log.Logger
 }
 
-func NewRandomImageFactory(layerSizeKB, layerCount uint, seed int64, tags []string) RandomImageFactory {
+func NewRandomImageFactory(seed int64) RandomImageFactory {
 
 	return RandomImageFactory{
-		imageDir:    path.Join(baseImageDir, fmt.Sprintf("%d", seed)),
-		layerSizeKB: layerSizeKB,
-		layerCount:  layerCount,
-		tags:        tags,
-		src:         rand.New(rand.NewSource(seed)),
+		imageDir: path.Join(baseImageDir, fmt.Sprintf("%d", seed)),
+		src:      rand.New(rand.NewSource(seed)),
 	}
 }
 
@@ -58,11 +51,11 @@ func (f *RandomImageFactory) WithLogger(l *log.Logger) { f.logger = l }
 // those files to build a docker image with layers filled using the
 // randomly-generated files according to the random layer count and layer size
 // parameters specified in RandomImageFactory
-func (f *RandomImageFactory) GenerateImage() error {
+func (f *RandomImageFactory) GenerateImage(layerSizeKB, layerCount uint, tags []string) error {
 	if f.logger == nil {
 		f.logger = log.New(ioutil.Discard, "", log.LstdFlags)
 	}
-	err := f.generateRandomFilePool()
+	err := f.generateRandomFilePool(layerSizeKB, layerCount)
 	if err != nil {
 		return err
 	}
@@ -93,7 +86,7 @@ func (f *RandomImageFactory) GenerateImage() error {
 
 	options := types.ImageBuildOptions{
 		Dockerfile: dockerfilePath,
-		Tags:       f.tags,
+		Tags:       tags,
 	}
 	resp, err := cli.ImageBuild(context.Background(), buildContext, options)
 	if err != nil {
@@ -121,12 +114,12 @@ func (f *RandomImageFactory) createArchive(name string, filePaths []string) erro
 	for _, filePath := range filePaths {
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
-			return fmt.Errorf("failed to read file info %q: %w", err)
+			return fmt.Errorf("failed to read file info %q: %w", filePath, err)
 		}
 
 		bs, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return fmt.Errorf("failed to read file %q: %w", err)
+			return fmt.Errorf("failed to read file %q: %w", filePath, err)
 		}
 
 		hdr := &tar.Header{
@@ -156,14 +149,14 @@ func (f *RandomImageFactory) shuffleGeneratedFilePaths() {
 	}
 }
 
-func (f *RandomImageFactory) generateRandomFilePool() error {
+func (f *RandomImageFactory) generateRandomFilePool(layerSizeKB, layerCount uint) error {
 	err := os.MkdirAll(f.imageDir, 0700)
 	if err != nil {
 		return fmt.Errorf("failed creating directory %q: %w", f.imageDir, err)
 	}
 
-	for i := uint(0); i < f.layerCount; i++ {
-		filePath := path.Join(f.imageDir, fmt.Sprintf("random_%dKB_%d.txt", f.layerSizeKB, i))
+	for i := uint(0); i < layerCount; i++ {
+		filePath := path.Join(f.imageDir, fmt.Sprintf("random_%dKB_%d.txt", layerSizeKB, i))
 		f.allGeneratedFiles = append(f.allGeneratedFiles, filePath)
 
 		_, err = os.Stat(filePath)
@@ -173,7 +166,7 @@ func (f *RandomImageFactory) generateRandomFilePool() error {
 			return fmt.Errorf("error checking if file exists: %w", err)
 		}
 
-		err = ioutil.WriteFile(filePath, f.randBytes(1024*int(f.layerSizeKB)), 0644)
+		err = ioutil.WriteFile(filePath, f.randBytes(1024*int(layerSizeKB)), 0644)
 		if err != nil {
 			return fmt.Errorf("error writing random bytes to file: %w", err)
 		}

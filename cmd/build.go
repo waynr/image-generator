@@ -22,10 +22,10 @@ import (
 
 // buildCmd represents the build command
 var (
-	layerSize  uint
-	layerCount uint
-	seed       = int64(4848484)
-	tags       = []string{
+	layerSizeKB uint
+	layerCount  uint
+	seed        = int64(4848484)
+	tags        = []string{
 		"registry.digitalocean.com/meow/rando",
 	}
 	buildCmd = &cobra.Command{
@@ -38,9 +38,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			randomImageFactory := image.NewRandomImageFactory(layerSize, layerCount,
-				seed, tags)
-			return randomImageFactory.GenerateImage()
+			randomImageFactory := image.NewRandomImageFactory(seed)
+			return randomImageFactory.GenerateImage(layerSizeKB, layerCount, tags)
 		},
 	}
 )
@@ -53,6 +52,6 @@ func init() {
 
 	buildCmd.Flags().UintVarP(&layerCount, "layer-count", "", layerCount, "image layer count")
 	buildCmd.MarkFlagRequired("layer-count")
-	buildCmd.Flags().UintVarP(&layerSize, "layer-size", "", layerSize, "image layer size in KB")
+	buildCmd.Flags().UintVarP(&layerSizeKB, "layer-size", "", layerSizeKB, "image layer size in KB")
 	buildCmd.MarkFlagRequired("layer-size")
 }
