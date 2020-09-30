@@ -37,15 +37,27 @@ type RandomImageFactory struct {
 	logger            *log.Logger
 }
 
-func NewRandomImageFactory(seed int64) RandomImageFactory {
+type RandomImageFactoryOpt func(f *RandomImageFactory)
 
-	return RandomImageFactory{
+func NewRandomImageFactory(seed int64, opts ...RandomImageFactoryOpt) RandomImageFactory {
+
+	f := RandomImageFactory{
 		imageDir: path.Join(baseImageDir, fmt.Sprintf("%d", seed)),
 		src:      rand.New(rand.NewSource(seed)),
 	}
+
+	for _, opt := range opts {
+		opt(&f)
+	}
+
+	return f
 }
 
-func (f *RandomImageFactory) WithLogger(l *log.Logger) { f.logger = l }
+func WithLogger(l *log.Logger) RandomImageFactoryOpt {
+	return func(f *RandomImageFactory) {
+		f.logger = l
+	}
+}
 
 // GenerateImage generates unique files filled with random bytes then uses
 // those files to build a docker image with layers filled using the
