@@ -208,7 +208,7 @@ func (f *RandomImageFactory) getDockerClient() (*client.Client, error) {
 		return f.dockerClient, nil
 	}
 
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialized docker client: %w", err)
 	}
